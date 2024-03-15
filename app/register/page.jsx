@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import './style.css';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
 
 function Register() {
@@ -9,17 +10,36 @@ function Register() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [errorTextPass, setErrorTextPass] = useState('');
+    const [isError, setIsError] = useState(false);
     const [errorTextConPass, setErrorTextConPass] = useState('');
+    const [alertMessage, setAlertMessage] = useState('');
     const routes = useRouter();
 
-    const handleRegister = (e) => {
+    const handleRegister = async (e) => {
         e.preventDefault();
-    };  
+        var token;
+        try {
+            const response = await axios.post('http://localhost:3001/gettoken', { username, password });
+            const token = response.data.accessToken;
+            // Perform registration process
+            await axios.get('http://localhost:3001/post', {
+                params: { username:username, password:password },
+                headers: {
+                    authorization: `Bearer ${token}`
+                }
+            });
+            setAlertMessage('Registration successful');
+            setIsError(false);
+        } catch (error) {
+            setAlertMessage('Error registering: ' + error.message);
+            setIsError(true);
+        }
+    };
 
     const handlePassword = (e) => {
         const newPassword = e.target.value;
         const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,64}$/;
-        if (!passwordPattern.test(newPassword)) {            
+        if (!passwordPattern.test(newPassword)) {
             if (!/(?=.*[@$!%*?&])/.test(newPassword)) {
                 setErrorTextPass("At least one special character");
             }
@@ -34,7 +54,7 @@ function Register() {
             }
             else if (newPassword.length < 8) {
                 setErrorTextPass("At least 8 characters");
-            } 
+            }
         } else {
             setErrorTextPass('');
         }
@@ -51,7 +71,7 @@ function Register() {
             setErrorTextConPass('');
         }
         setConfirmPassword(e.target.value);
-    };  
+    };
 
     const backButton = () => {
         routes.push('/login/');
@@ -61,6 +81,12 @@ function Register() {
         <div className="Register-container">
             <button className='back-button' onClick={backButton}>Back to Login</button>
             <h1>Register</h1>
+            
+            {alertMessage && (
+                <div className={isError ? 'alert error' : 'alert success'}>
+                    {alertMessage}
+                </div>
+            )}
             <form onSubmit={handleRegister}>
                 <div className="form-group">
                     <label htmlFor="username">Username</label>
@@ -76,7 +102,7 @@ function Register() {
                     <input type="password" id="confirm-password" value={confirmPassword} onChange={handleConfirm} required />
                     <span>{errorTextConPass}</span>
                 </div>
-                    <div className="form-button">
+                <div className="form-button">
                     <input type="submit" value="Register" />
                 </div>
             </form>
